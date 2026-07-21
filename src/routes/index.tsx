@@ -198,18 +198,29 @@ function Navbar() {
 function Hero() {
   const sectionRef = useRef<HTMLElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const fadeRef = useRef<HTMLDivElement | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
     const section = sectionRef.current;
+    const fade = fadeRef.current;
     if (!video || !section) return;
 
     video.pause();
 
+    const isMobile =
+      typeof window !== "undefined" &&
+      (window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 768);
+    // On mobile, skip tiny seeks (they cause jank while decoding).
+    const seekThreshold = isMobile ? 0.04 : 0.012;
+    const lerpFactor = isMobile ? 0.18 : 0.12;
+
     let duration = 0;
+    let targetProgress = 0;
     let targetTime = 0;
-    let currentTime = 0;
+    let currentTime = -1;
+    let lastSeek = -1;
     let raf = 0;
     let running = false;
 
@@ -218,6 +229,7 @@ function Hero() {
       if (duration > 0) {
         try { video.currentTime = 0; } catch {}
         setReady(true);
+        compute();
       }
     };
 
@@ -227,43 +239,63 @@ function Hero() {
       video.addEventListener("loadedmetadata", onMeta, { once: true });
     }
 
+    const applyFade = (progress: number) => {
+      if (!fade) return;
+      // Fade in the background overlay in the last 15% of the scrub.
+      const o = progress <= 0.85 ? 0 : Math.min(1, (progress - 0.85) / 0.15);
+      fade.style.opacity = String(o);
+    };
+
     const compute = () => {
       const rect = section.getBoundingClientRect();
       const vh = window.innerHeight;
-      // total scrollable distance inside the pinned section
       const total = section.offsetHeight - vh;
       const scrolled = Math.min(Math.max(-rect.top, 0), total);
       const progress = total > 0 ? scrolled / total : 0;
+      targetProgress = progress;
       targetTime = progress * (duration || 0);
-      if (!running) tick();
+      applyFade(progress);
+      if (!running && duration > 0) {
+        running = true;
+        raf = requestAnimationFrame(tick);
+      }
     };
 
     const tick = () => {
-      running = true;
-      // Lerp for buttery smoothness (Apple/Polestar feel)
+      if (currentTime < 0) currentTime = targetTime;
       const diff = targetTime - currentTime;
-      if (Math.abs(diff) < 0.003) {
+      if (Math.abs(diff) < 0.002) {
         currentTime = targetTime;
       } else {
-        currentTime += diff * 0.12;
+        currentTime += diff * lerpFactor;
       }
-      if (duration > 0) {
+      // Only seek when the change is perceptible; big win on mobile.
+      if (Math.abs(currentTime - lastSeek) >= seekThreshold || Math.abs(diff) < 0.002) {
         try {
           video.currentTime = Math.min(Math.max(currentTime, 0), duration - 0.001);
+          lastSeek = currentTime;
         } catch {}
       }
-      if (Math.abs(targetTime - currentTime) > 0.003) {
+      if (Math.abs(targetTime - currentTime) > 0.002) {
         raf = requestAnimationFrame(tick);
       } else {
         running = false;
       }
     };
 
-    const onScroll = () => compute();
+    let scrollScheduled = false;
+    const onScroll = () => {
+      if (scrollScheduled) return;
+      scrollScheduled = true;
+      requestAnimationFrame(() => {
+        scrollScheduled = false;
+        compute();
+      });
+    };
     const onResize = () => compute();
 
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onResize);
+    window.addEventListener("resize", onResize, { passive: true });
     compute();
 
     return () => {
@@ -281,11 +313,12 @@ function Hero() {
       className="relative w-full"
       style={{ height: "350vh" }}
     >
-      <div className="sticky top-0 h-[100svh] w-screen overflow-hidden">
+      <div className="sticky top-0 h-[100svh] w-screen overflow-hidden bg-background">
         <video
           ref={videoRef}
           src={heroVideoAsset.url}
           className="absolute inset-0 h-full w-full object-cover"
+          style={{ transform: "translateZ(0)", willChange: "transform" }}
           muted
           playsInline
           preload="auto"
@@ -303,8 +336,14 @@ function Hero() {
             aria-hidden="true"
           />
         )}
+        {/* Elegant fade-out to reveal main hero */}
+        <div
+          ref={fadeRef}
+          className="pointer-events-none absolute inset-0 bg-background"
+          style={{ opacity: 0, willChange: "opacity" }}
+          aria-hidden="true"
+        />
       </div>
-
     </section>
   );
 }
