@@ -303,54 +303,63 @@ function Hero() {
             aria-hidden="true"
           />
         )}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(180deg, oklch(0.15 0.03 150 / 0.35) 0%, oklch(0.15 0.03 150 / 0.15) 40%, oklch(0.12 0.03 150 / 0.85) 100%)",
-          }}
-        />
-
-        <div className="relative mx-auto flex h-[100svh] max-w-7xl flex-col justify-end px-6 pb-24 pt-40 lg:px-10 lg:pb-32">
-          <div className="max-w-3xl animate-fade-in-slow">
-            <span className="eyebrow gold-rule">
-              <span className="gold-rule-line" />
-              Lago da Pedra · Maranhão
-              <span className="gold-rule-line" />
-            </span>
-            <h1
-              className="text-display mt-6 text-cream"
-              style={{ fontSize: "clamp(2.75rem, 7.5vw, 6.5rem)" }}
-            >
-              Onde a natureza <em className="italic" style={{ color: "var(--gold-soft)" }}>abraça</em> os sabores do Maranhão.
-            </h1>
-            <p className="mt-8 max-w-xl text-base text-cream/85 md:text-lg">
-              Um refúgio a céu aberto entre coqueiros, brasas acesas e boa música — feito para quem
-              valoriza o tempo que a mesa merece, com quem a vida pediu para reunir.
-            </p>
-            <div className="mt-10 flex flex-wrap items-center gap-4">
-              <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" className="btn-premium animate-gold-shimmer">
-                Reserve sua mesa
-                <ArrowUpRight className="h-4 w-4" />
-              </a>
-              <a href="#especialidades" className="text-sm font-medium tracking-wide text-cream/90 story-link">
-                Conheça o cardápio
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <a
-          href="#sobre"
-          aria-label="Rolar para a próxima seção"
-          className="animate-soft-bounce absolute bottom-8 left-1/2 z-10 -translate-x-1/2 text-cream/70 hover:text-cream"
-        >
-          <ChevronDown className="h-8 w-8" />
-        </a>
       </div>
+
     </section>
   );
 }
+
+/* ============================================================ */
+
+function HeroContent() {
+  return (
+    <section id="hero-content" className="relative overflow-hidden bg-background">
+      <div
+        className="absolute inset-x-0 top-0 h-40 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(180deg, oklch(0.12 0.03 150 / 0.9) 0%, transparent 100%)",
+        }}
+      />
+      <div className="relative mx-auto max-w-7xl px-6 py-24 md:py-32 lg:px-10 lg:py-40">
+        <div className="reveal max-w-3xl">
+          <span className="eyebrow gold-rule">
+            <span className="gold-rule-line" />
+            Lago da Pedra · Maranhão
+            <span className="gold-rule-line" />
+          </span>
+          <h1
+            className="text-display mt-6 text-foreground"
+            style={{ fontSize: "clamp(2.75rem, 7.5vw, 6.5rem)" }}
+          >
+            Onde a natureza <em className="italic" style={{ color: "var(--gold-soft)" }}>abraça</em> os sabores do Maranhão.
+          </h1>
+          <p className="mt-8 max-w-xl text-base text-foreground/75 md:text-lg">
+            Um refúgio a céu aberto entre coqueiros, brasas acesas e boa música — feito para quem
+            valoriza o tempo que a mesa merece, com quem a vida pediu para reunir.
+          </p>
+          <div className="mt-10 flex flex-wrap items-center gap-4">
+            <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" className="btn-premium animate-gold-shimmer">
+              Reserve sua mesa
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
+            <a href="#especialidades" className="text-sm font-medium tracking-wide text-foreground/80 story-link">
+              Conheça o cardápio
+            </a>
+          </div>
+        </div>
+      </div>
+      <a
+        href="#sobre"
+        aria-label="Rolar para a próxima seção"
+        className="animate-soft-bounce absolute bottom-6 left-1/2 -translate-x-1/2 text-foreground/60 hover:text-foreground"
+      >
+        <ChevronDown className="h-7 w-7" />
+      </a>
+    </section>
+  );
+}
+
 
 /* ============================================================ */
 
@@ -1098,6 +1107,8 @@ function Home() {
     <main className="relative min-h-screen bg-background">
       <Navbar />
       <Hero />
+      <HeroContent />
+
       <About />
       <Experience />
       <Highlights />
