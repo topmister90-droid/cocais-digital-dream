@@ -1055,6 +1055,8 @@ function Home() {
     <main className="relative min-h-screen bg-background">
       <Navbar />
       <Hero />
+      <HeroContent />
+
       <About />
       <Experience />
       <Highlights />
