@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import heroVideoAsset from "@/assets/hero-video.mp4.asset.json";
 import {
   Leaf,
   Utensils,
@@ -195,59 +196,159 @@ function Navbar() {
 /* ============================================================ */
 
 function Hero() {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const section = sectionRef.current;
+    if (!video || !section) return;
+
+    video.pause();
+
+    let duration = 0;
+    let targetTime = 0;
+    let currentTime = 0;
+    let raf = 0;
+    let running = false;
+
+    const onMeta = () => {
+      duration = video.duration || 0;
+      if (duration > 0) {
+        try { video.currentTime = 0; } catch {}
+        setReady(true);
+      }
+    };
+
+    if (video.readyState >= 1 && video.duration) {
+      onMeta();
+    } else {
+      video.addEventListener("loadedmetadata", onMeta, { once: true });
+    }
+
+    const compute = () => {
+      const rect = section.getBoundingClientRect();
+      const vh = window.innerHeight;
+      // total scrollable distance inside the pinned section
+      const total = section.offsetHeight - vh;
+      const scrolled = Math.min(Math.max(-rect.top, 0), total);
+      const progress = total > 0 ? scrolled / total : 0;
+      targetTime = progress * (duration || 0);
+      if (!running) tick();
+    };
+
+    const tick = () => {
+      running = true;
+      // Lerp for buttery smoothness (Apple/Polestar feel)
+      const diff = targetTime - currentTime;
+      if (Math.abs(diff) < 0.003) {
+        currentTime = targetTime;
+      } else {
+        currentTime += diff * 0.12;
+      }
+      if (duration > 0) {
+        try {
+          video.currentTime = Math.min(Math.max(currentTime, 0), duration - 0.001);
+        } catch {}
+      }
+      if (Math.abs(targetTime - currentTime) > 0.003) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        running = false;
+      }
+    };
+
+    const onScroll = () => compute();
+    const onResize = () => compute();
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onResize);
+    compute();
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
+      video.removeEventListener("loadedmetadata", onMeta);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
   return (
-    <section id="top" className="relative min-h-[100svh] w-full overflow-hidden">
-      <div className="absolute inset-0">
-        <img
-          src={heroImg}
-          alt="Tenda dos Cocais ao entardecer, iluminada por luzes douradas entre coqueiros"
-          className="animate-ken-burns h-full w-full object-cover"
-          width={1920}
-          height={1280}
-          fetchPriority="high"
+    <section
+      ref={sectionRef}
+      id="top"
+      className="relative w-full"
+      style={{ height: "350vh" }}
+    >
+      <div className="sticky top-0 h-[100svh] w-screen overflow-hidden">
+        <video
+          ref={videoRef}
+          src={heroVideoAsset.url}
+          className="absolute inset-0 h-full w-full object-cover"
+          muted
+          playsInline
+          preload="auto"
+          // @ts-expect-error - iOS attribute
+          webkit-playsinline="true"
+          disablePictureInPicture
+          disableRemotePlayback
+          poster={heroImg}
+          aria-hidden="true"
         />
+        {!ready && (
+          <img
+            src={heroImg}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            aria-hidden="true"
+          />
+        )}
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(180deg, oklch(0.15 0.03 150 / 0.35) 0%, oklch(0.15 0.03 150 / 0.15) 40%, oklch(0.12 0.03 150 / 0.85) 100%)" }}
+          style={{
+            background:
+              "linear-gradient(180deg, oklch(0.15 0.03 150 / 0.35) 0%, oklch(0.15 0.03 150 / 0.15) 40%, oklch(0.12 0.03 150 / 0.85) 100%)",
+          }}
         />
-      </div>
 
-      <div className="relative mx-auto flex min-h-[100svh] max-w-7xl flex-col justify-end px-6 pb-24 pt-40 lg:px-10 lg:pb-32">
-        <div className="max-w-3xl animate-fade-in-slow">
-          <span className="eyebrow gold-rule">
-            <span className="gold-rule-line" />
-            Lago da Pedra · Maranhão
-            <span className="gold-rule-line" />
-          </span>
-          <h1
-            className="text-display mt-6 text-cream"
-            style={{ fontSize: "clamp(2.75rem, 7.5vw, 6.5rem)" }}
-          >
-            Onde a natureza <em className="italic" style={{ color: "var(--gold-soft)" }}>abraça</em> os sabores do Maranhão.
-          </h1>
-          <p className="mt-8 max-w-xl text-base text-cream/85 md:text-lg">
-            Um refúgio a céu aberto entre coqueiros, brasas acesas e boa música — feito para quem
-            valoriza o tempo que a mesa merece, com quem a vida pediu para reunir.
-          </p>
-          <div className="mt-10 flex flex-wrap items-center gap-4">
-            <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" className="btn-premium animate-gold-shimmer">
-              Reserve sua mesa
-              <ArrowUpRight className="h-4 w-4" />
-            </a>
-            <a href="#especialidades" className="text-sm font-medium tracking-wide text-cream/90 story-link">
-              Conheça o cardápio
-            </a>
+        <div className="relative mx-auto flex h-[100svh] max-w-7xl flex-col justify-end px-6 pb-24 pt-40 lg:px-10 lg:pb-32">
+          <div className="max-w-3xl animate-fade-in-slow">
+            <span className="eyebrow gold-rule">
+              <span className="gold-rule-line" />
+              Lago da Pedra · Maranhão
+              <span className="gold-rule-line" />
+            </span>
+            <h1
+              className="text-display mt-6 text-cream"
+              style={{ fontSize: "clamp(2.75rem, 7.5vw, 6.5rem)" }}
+            >
+              Onde a natureza <em className="italic" style={{ color: "var(--gold-soft)" }}>abraça</em> os sabores do Maranhão.
+            </h1>
+            <p className="mt-8 max-w-xl text-base text-cream/85 md:text-lg">
+              Um refúgio a céu aberto entre coqueiros, brasas acesas e boa música — feito para quem
+              valoriza o tempo que a mesa merece, com quem a vida pediu para reunir.
+            </p>
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" className="btn-premium animate-gold-shimmer">
+                Reserve sua mesa
+                <ArrowUpRight className="h-4 w-4" />
+              </a>
+              <a href="#especialidades" className="text-sm font-medium tracking-wide text-cream/90 story-link">
+                Conheça o cardápio
+              </a>
+            </div>
           </div>
         </div>
-      </div>
 
-      <a
-        href="#sobre"
-        aria-label="Rolar para a próxima seção"
-        className="animate-soft-bounce absolute bottom-8 left-1/2 z-10 -translate-x-1/2 text-cream/70 hover:text-cream"
-      >
-        <ChevronDown className="h-8 w-8" />
-      </a>
+        <a
+          href="#sobre"
+          aria-label="Rolar para a próxima seção"
+          className="animate-soft-bounce absolute bottom-8 left-1/2 z-10 -translate-x-1/2 text-cream/70 hover:text-cream"
+        >
+          <ChevronDown className="h-8 w-8" />
+        </a>
+      </div>
     </section>
   );
 }
