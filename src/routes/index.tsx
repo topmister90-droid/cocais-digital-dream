@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import heroVideoAsset from "@/assets/hero-video.mp4.asset.json";
 import {
   Leaf,
@@ -68,12 +68,33 @@ export const Route = createFileRoute("/")({
 
 function useScrolled(threshold = 40) {
   const [scrolled, setScrolled] = useState(false);
+  const scrolledRef = useRef(false);
+
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > threshold);
-    onScroll();
+    let raf = 0;
+
+    const update = () => {
+      raf = 0;
+      const next = window.scrollY > threshold;
+      if (next !== scrolledRef.current) {
+        scrolledRef.current = next;
+        setScrolled(next);
+      }
+    };
+
+    const onScroll = () => {
+      if (raf) return;
+      raf = window.requestAnimationFrame(update);
+    };
+
+    update();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) window.cancelAnimationFrame(raf);
+    };
   }, [threshold]);
+
   return scrolled;
 }
 
