@@ -233,12 +233,6 @@ function Hero() {
       }
     };
 
-    if (video.readyState >= 1 && video.duration) {
-      onMeta();
-    } else {
-      video.addEventListener("loadedmetadata", onMeta, { once: true });
-    }
-
     const applyFade = (progress: number) => {
       if (!fade) return;
       // Fade in the background overlay in the last 15% of the scrub.
