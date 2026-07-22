@@ -233,7 +233,23 @@ function Navbar() {
 /* ============================================================ */
 
 function Hero() {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const playOnce = () => {
+      if (video.readyState >= 2) setReady(true);
+      void video.play().catch(() => undefined);
+    };
+
+    playOnce();
+    document.addEventListener("visibilitychange", playOnce);
+
+    return () => document.removeEventListener("visibilitychange", playOnce);
+  }, []);
 
   return (
     <section
@@ -241,6 +257,7 @@ function Hero() {
       className="relative h-[100svh] w-full overflow-hidden bg-background"
     >
       <video
+        ref={videoRef}
         src={heroVideoAsset.url}
         className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
           ready ? "opacity-100" : "opacity-0"
