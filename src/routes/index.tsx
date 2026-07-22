@@ -21,7 +21,7 @@ import {
 
 import { useReveal } from "@/hooks/use-reveal";
 
-import heroImg from "@/assets/hero.jpg";
+import heroImg from "@/assets/hero.png";
 import aboutImg from "@/assets/about.jpg";
 import dishFish from "@/assets/dish-fish.jpg";
 import dishMeat from "@/assets/dish-meat.jpg";
