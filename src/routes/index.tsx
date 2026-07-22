@@ -43,6 +43,22 @@ const WHATSAPP_URL =
 
 export const Route = createFileRoute("/")({
   head: () => ({
+    meta: [
+      { title: "Tenda dos Cocais — Gastronomia & Natureza" },
+      {
+        name: "description",
+        content:
+          "Viva a Tenda dos Cocais em Lago da Pedra, MA: gastronomia regional, natureza, playground, música ao vivo e momentos especiais para reunir família e amigos.",
+      },
+      { property: "og:title", content: "Tenda dos Cocais — Gastronomia & Natureza" },
+      {
+        property: "og:description",
+        content:
+          "Um refúgio premium em meio à natureza com peixes regionais, carnes na brasa, drinks autorais e hospitalidade maranhense.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
     links: [{ rel: "canonical", href: "/" }],
   }),
   component: Home,
@@ -52,12 +68,33 @@ export const Route = createFileRoute("/")({
 
 function useScrolled(threshold = 40) {
   const [scrolled, setScrolled] = useState(false);
+  const scrolledRef = useRef(false);
+
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > threshold);
-    onScroll();
+    let raf = 0;
+
+    const update = () => {
+      raf = 0;
+      const next = window.scrollY > threshold;
+      if (next !== scrolledRef.current) {
+        scrolledRef.current = next;
+        setScrolled(next);
+      }
+    };
+
+    const onScroll = () => {
+      if (raf) return;
+      raf = window.requestAnimationFrame(update);
+    };
+
+    update();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) window.cancelAnimationFrame(raf);
+    };
   }, [threshold]);
+
   return scrolled;
 }
 
@@ -196,155 +233,59 @@ function Navbar() {
 /* ============================================================ */
 
 function Hero() {
-  const sectionRef = useRef<HTMLElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const fadeRef = useRef<HTMLDivElement | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
-    const section = sectionRef.current;
-    const fade = fadeRef.current;
-    if (!video || !section) return;
+    if (!video) return;
 
-    video.pause();
-
-    const isMobile =
-      typeof window !== "undefined" &&
-      (window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 768);
-    // On mobile, skip tiny seeks (they cause jank while decoding).
-    const seekThreshold = isMobile ? 0.04 : 0.012;
-    const lerpFactor = isMobile ? 0.18 : 0.12;
-
-    let duration = 0;
-    let targetProgress = 0;
-    let targetTime = 0;
-    let currentTime = -1;
-    let lastSeek = -1;
-    let raf = 0;
-    let running = false;
-
-    const onMeta = () => {
-      duration = video.duration || 0;
-      if (duration > 0) {
-        try { video.currentTime = 0; } catch {}
-        setReady(true);
-        compute();
-      }
+    const playOnce = () => {
+      if (video.readyState >= 2) setReady(true);
+      void video.play().catch(() => undefined);
     };
 
-    const applyFade = (progress: number) => {
-      if (!fade) return;
-      // Fade in the background overlay in the last 15% of the scrub.
-      const o = progress <= 0.85 ? 0 : Math.min(1, (progress - 0.85) / 0.15);
-      fade.style.opacity = String(o);
-    };
+    playOnce();
+    document.addEventListener("visibilitychange", playOnce);
 
-    const compute = () => {
-      const rect = section.getBoundingClientRect();
-      const vh = window.innerHeight;
-      const total = section.offsetHeight - vh;
-      const scrolled = Math.min(Math.max(-rect.top, 0), total);
-      const progress = total > 0 ? scrolled / total : 0;
-      targetProgress = progress;
-      targetTime = progress * (duration || 0);
-      applyFade(progress);
-      if (!running && duration > 0) {
-        running = true;
-        raf = requestAnimationFrame(tick);
-      }
-    };
-
-    const tick = () => {
-      if (currentTime < 0) currentTime = targetTime;
-      const diff = targetTime - currentTime;
-      if (Math.abs(diff) < 0.002) {
-        currentTime = targetTime;
-      } else {
-        currentTime += diff * lerpFactor;
-      }
-      // Only seek when the change is perceptible; big win on mobile.
-      if (Math.abs(currentTime - lastSeek) >= seekThreshold || Math.abs(diff) < 0.002) {
-        try {
-          video.currentTime = Math.min(Math.max(currentTime, 0), duration - 0.001);
-          lastSeek = currentTime;
-        } catch {}
-      }
-      if (Math.abs(targetTime - currentTime) > 0.002) {
-        raf = requestAnimationFrame(tick);
-      } else {
-        running = false;
-      }
-    };
-
-    let scrollScheduled = false;
-    const onScroll = () => {
-      if (scrollScheduled) return;
-      scrollScheduled = true;
-      requestAnimationFrame(() => {
-        scrollScheduled = false;
-        compute();
-      });
-    };
-    const onResize = () => compute();
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onResize, { passive: true });
-
-    if (video.readyState >= 1 && video.duration) {
-      onMeta();
-    } else {
-      video.addEventListener("loadedmetadata", onMeta);
-    }
-
-    compute();
-
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onResize);
-      video.removeEventListener("loadedmetadata", onMeta);
-      cancelAnimationFrame(raf);
-    };
+    return () => document.removeEventListener("visibilitychange", playOnce);
   }, []);
 
   return (
     <section
-      ref={sectionRef}
       id="top"
-      className="relative w-full"
-      style={{ height: "350vh" }}
+      className="relative h-[100svh] w-full overflow-hidden bg-background"
     >
-      <div className="sticky top-0 h-[100svh] w-screen overflow-hidden bg-background">
-        <video
-          ref={videoRef}
-          src={heroVideoAsset.url}
+      <video
+        ref={videoRef}
+        src={heroVideoAsset.url}
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
+          ready ? "opacity-100" : "opacity-0"
+        }`}
+        style={{ transform: "translateZ(0)", willChange: "opacity" }}
+        autoPlay
+        muted
+        playsInline
+        preload="auto"
+        onLoadedData={(event) => {
+          setReady(true);
+          void event.currentTarget.play().catch(() => undefined);
+        }}
+        {...({ "webkit-playsinline": "true" } as Record<string, string>)}
+        disablePictureInPicture
+        disableRemotePlayback
+        poster={heroImg}
+        aria-hidden="true"
+      />
+      {!ready && (
+        <img
+          src={heroImg}
+          alt=""
           className="absolute inset-0 h-full w-full object-cover"
-          style={{ transform: "translateZ(0)", willChange: "transform" }}
-          muted
-          playsInline
-          preload="auto"
-          {...({ "webkit-playsinline": "true" } as Record<string, string>)}
-          disablePictureInPicture
-          disableRemotePlayback
-          poster={heroImg}
+          style={{ transform: "translateZ(0)" }}
           aria-hidden="true"
         />
-        {!ready && (
-          <img
-            src={heroImg}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-            aria-hidden="true"
-          />
-        )}
-        {/* Elegant fade-out to reveal main hero */}
-        <div
-          ref={fadeRef}
-          className="pointer-events-none absolute inset-0 bg-background"
-          style={{ opacity: 0, willChange: "opacity" }}
-          aria-hidden="true"
-        />
-      </div>
+      )}
     </section>
   );
 }
