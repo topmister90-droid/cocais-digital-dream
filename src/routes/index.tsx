@@ -290,6 +290,13 @@ function Hero() {
 
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onResize, { passive: true });
+
+    if (video.readyState >= 1 && video.duration) {
+      onMeta();
+    } else {
+      video.addEventListener("loadedmetadata", onMeta);
+    }
+
     compute();
 
     return () => {
