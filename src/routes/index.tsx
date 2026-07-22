@@ -250,7 +250,10 @@ function Hero() {
         muted
         playsInline
         preload="auto"
-        onLoadedData={() => setReady(true)}
+        onLoadedData={(event) => {
+          setReady(true);
+          void event.currentTarget.play().catch(() => undefined);
+        }}
         {...({ "webkit-playsinline": "true" } as Record<string, string>)}
         disablePictureInPicture
         disableRemotePlayback
